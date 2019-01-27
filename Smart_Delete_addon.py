@@ -3,7 +3,7 @@ bl_info = {
     "author": "Sergey Golubev",
     "version": (0, 1),
     "blender": (2, 80, 0),
-    "location": "In delete menus of objects, components and curves. Next to the usual delete button.",
+    "location": "In delete menus of objects and components. Next to the usual delete button.",
     "description": "Delete objects or components based on selection mode.",
     "warning": "Cannot work with components of different objects at the same time.",
     "wiki_url": "",
@@ -11,45 +11,30 @@ bl_info = {
 }
 
 
+### MAIN PART OF ADDON STARTS HERE
+
 import bpy
 import bmesh
 
 
-### MAIN PART OF ADDON STARTS HERE
-
 def decompose_sel():
-    
     sel_verts = [s for s in bm.verts if s.select] # get the list of selected verices
     sel_edges = [s for s in bm.edges if s.select] # get the list of selected edges
     sel_faces = [s for s in bm.faces if s.select] # get the list of selected polygons
 
     return sel_verts , sel_edges , sel_faces
 
-
-def delete_objects():  # for object selection mode
-
-    bpy.ops.object.delete(use_global=False)  # delete selected objects
-
-
 def delete_components():  # for components selection mode
     
     global obj
     global me
     global bm
-
-    if bpy.context.edit_object.type == 'CURVE':     # if a curve is selected
-        
-        bpy.ops.curve.delete(type='VERT')           # delete curve points
-
-
-
-        
+    
     if bpy.context.edit_object.type == 'MESH':      # if mesh is selected
-
         obj = bpy.context.edit_object
         me = obj.data
         bm = bmesh.from_edit_mesh(me)
-    
+
         sel_mode = bpy.context.tool_settings.mesh_select_mode[:] # define active selection modes
     
         if sel_mode[2] == True:                     # if polygon selection mode is on
@@ -81,22 +66,22 @@ def delete_components():  # for components selection mode
                         wv.append(v)
                     
             bmesh.ops.delete(bm, geom=wv, context = "VERTS")    # remove remaining vertices in edge-chains
+        
         bmesh.update_edit_mesh(me, True)
-
-
 
 def smart_delete():   # check what is selected and start the corresponding function
     
     select_mode = bpy.context.object.mode
     
     if select_mode == "OBJECT":
-        delete_objects()
+        bpy.ops.object.delete(use_global=False) 
         
     if select_mode == "EDIT":
         delete_components()
 
-
 ### MAIN PART OF ADDON ENDS HERE
+
+
 
 ### ADDON AND INTERFACE PART STARTS HERE
 
@@ -110,7 +95,6 @@ class OBJECT_OT_smart_delete(bpy.types.Operator):
         
         smart_delete()
         
-        
         return {'FINISHED'}
 
 
@@ -119,13 +103,7 @@ def smart_delete_button_components(self , context): # add separator button in co
     self.layout.operator(
             OBJECT_OT_smart_delete.bl_idname
             )
-            
-def smart_delete_button_curve(self , context): # add separator button in curve delete menu
-    self.layout.separator()
-    self.layout.operator(
-            OBJECT_OT_smart_delete.bl_idname
-            )
-    
+
 def smart_delete_button_objects(self , context): # add separator button in object delete menu
     self.layout.separator()
     self.layout.operator(
@@ -138,7 +116,6 @@ def smart_delete_button_objects(self , context): # add separator button in objec
 def register():
     bpy.utils.register_class(OBJECT_OT_smart_delete)
     bpy.types.VIEW3D_MT_edit_mesh_delete.append(smart_delete_button_components)
-    bpy.types.VIEW3D_MT_edit_curve_delete.append(smart_delete_button_curve)
     bpy.types.VIEW3D_MT_object.append(smart_delete_button_objects)
 
 
@@ -147,7 +124,6 @@ def register():
 def unregister():
     bpy.utils.unregister_class(OBJECT_OT_smart_delete)
     bpy.types.VIEW3D_MT_edit_mesh_delete.remove(smart_delete_button_components)
-    bpy.types.VIEW3D_MT_edit_curve_delete.remove(smart_delete_button_curve)
     bpy.types.VIEW3D_MT_object.remove(smart_delete_button_objects)
 
 
